@@ -18,7 +18,7 @@ export const fetchAllDeviceMetrics = async (deviceId) => {
       |> filter(fn: (r) => r["_measurement"] == "cpu")
       |> filter(fn: (r) => r["device_id"] == "${deviceId}")
       |> filter(fn: (r) => r["_field"] == "usage_user")
-      |> yield(name: "mean")
+      |> yield(name: "result")
   `;
 
   const memQuery = `
@@ -27,7 +27,7 @@ export const fetchAllDeviceMetrics = async (deviceId) => {
       |> filter(fn: (r) => r["_measurement"] == "mem")
       |> filter(fn: (r) => r["device_id"] == "${deviceId}")
       |> filter(fn: (r) => r["_field"] == "used_percent")
-      |> yield(name: "mean")
+      |> yield(name: "result")
   `;
 
   const diskQuery = `
@@ -36,7 +36,7 @@ export const fetchAllDeviceMetrics = async (deviceId) => {
       |> filter(fn: (r) => r["_measurement"] == "disk")
       |> filter(fn: (r) => r["device_id"] == "${deviceId}")
       |> filter(fn: (r) => r["_field"] == "used_percent")
-      |> yield(name: "mean")
+      |> yield(name: "result")
   `;
 
   // Run all three queries concurrently for speed

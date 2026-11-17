@@ -1,10 +1,10 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
-import metricRoutes from './routes/metrics.routes.js';
-
 // Load environment variables from .env
 dotenv.config();
+
+import express from 'express';
+import cors from 'cors';
+import metricRoutes from './routes/metrics.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
