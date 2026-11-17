@@ -20,6 +20,7 @@ app.get('/health', (req, res) => {
 
 // Register API Routes
 app.use('/api/metrics', metricRoutes);
+app.use('/api/devices', deviceRoutes);
 
 // Global Error Handler Catch-all
 app.use((err, req, res, next) => {
