@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import metricRoutes from './routes/metricRoutes.js';
+import metricRoutes from './routes/metrics.routes.js';
 
 // Load environment variables from .env
 dotenv.config();

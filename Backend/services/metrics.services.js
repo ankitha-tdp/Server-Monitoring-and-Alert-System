@@ -1,4 +1,4 @@
-import { queryApi, bucket } from '../config/influx.js';
+import { queryApi, bucket } from '../config/influxdb.js';
 
 // Helper function to execute a single Flux query
 const queryInflux = async (fluxQuery) => {

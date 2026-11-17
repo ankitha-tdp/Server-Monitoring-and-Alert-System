@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllMetrics } from '../controllers/metricController.js';
+import { getAllMetrics } from '../controllers/metrics.controllers.js';
 
 const router = express.Router();
 

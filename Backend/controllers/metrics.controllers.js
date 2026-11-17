@@ -1,4 +1,4 @@
-import * as metricService from '../services/metricService.js';
+import * as metricService from '../services/metrics.services.js';
 
 export const getAllMetrics = async (req, res) => {
   try {
