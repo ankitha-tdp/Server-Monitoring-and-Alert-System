@@ -2,34 +2,32 @@ import { supabase } from '../config/supabase.js';
 import { generateTelegrafSetupScript } from '../utils/generateTelegrafScript.js';
 import crypto from 'crypto';
 
-// POST /api/devices (Generates unique device_id automatically)
+// POST /api/devices - Aligned with schema columns
 export const registerDevice = async (req, res) => {
   try {
-    const { name, user_id, status } = req.body;
+    const { device_name, hostname, ip_address, user_id, os_name, os_version } = req.body;
 
-    if (!name) {
+    if (!device_name || !hostname) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Device name is required' 
+        error: 'device_name and hostname are required' 
       });
     }
-
-    // Automatically generate Windows device ID (e.g., dev_win_a1b2c3d4)
-    const device_id = `dev_win_${crypto.randomUUID().slice(0, 8)}`;
 
     const { data, error } = await supabase
       .from('devices')
       .insert([{
-        device_id,
-        name,
         user_id: user_id || null,
-        status: status || 'online',
+        device_name,
+        hostname,
+        ip_address: ip_address || null,
+        os_name: os_name || 'Windows',
+        os_version: os_version || '11',
+        agent_status: 'online',
       }])
       .select();
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
 
     return res.status(201).json({
       success: true,
@@ -37,26 +35,23 @@ export const registerDevice = async (req, res) => {
       data: data[0],
     });
   } catch (error) {
-    console.error('Error in registerDevice controller:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Internal Server Error' 
-    });
+    console.error('Error in registerDevice:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 };
 
-
-// GET /api/devices/script/:deviceId
+// GET /api/devices/script/:id
 export const getDeviceScript = (req, res) => {
   try {
-    const { deviceId } = req.params;
+    const { id } = req.params; // Using schema primary key 'id'
 
-    if (!deviceId) {
+    if (!id) {
       return res.status(400).send('# Error: Device ID is required');
     }
 
+    // Using the device UUID as the global tag in Telegraf
     const script = generateTelegrafSetupScript(
-      deviceId,
+      id,
       process.env.INFLUX_URL,
       process.env.INFLUX_TOKEN,
       process.env.INFLUX_ORG,
@@ -71,17 +66,16 @@ export const getDeviceScript = (req, res) => {
   }
 };
 
-
-// PATCH /api/devices/:deviceId (Update device name or status)
+// PATCH /api/devices/:id - Aligned with schema
 export const updateDevice = async (req, res) => {
   try {
-    const { deviceId } = req.params;
-    const { name, status } = req.body;
+    const { id } = req.params;
+    const { device_name, agent_status } = req.body;
 
     const { data, error } = await supabase
       .from('devices')
-      .update({ name, status, updated_at: new Date() })
-      .eq('device_id', deviceId)
+      .update({ device_name, agent_status })
+      .eq('id', id)
       .select();
 
     if (error) throw new Error(error.message);
@@ -96,30 +90,27 @@ export const updateDevice = async (req, res) => {
       data: data[0],
     });
   } catch (error) {
-    console.error('Error updating device:', error);
     return res.status(500).json({ success: false, error: error.message });
   }
 };
 
-
-// DELETE /api/devices/:deviceId (Revoke/Delete device)
+// DELETE /api/devices/:id - Aligned with schema
 export const deleteDevice = async (req, res) => {
   try {
-    const { deviceId } = req.params;
+    const { id } = req.params;
 
     const { error } = await supabase
       .from('devices')
       .delete()
-      .eq('device_id', deviceId);
+      .eq('id', id);
 
     if (error) throw new Error(error.message);
 
     return res.status(200).json({
       success: true,
-      message: `Device ${deviceId} deleted successfully`,
+      message: `Device ${id} deleted successfully`,
     });
   } catch (error) {
-    console.error('Error deleting device:', error);
     return res.status(500).json({ success: false, error: error.message });
   }
 };
