@@ -1,0 +1,19 @@
+
+### Test user registration
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+    "fullName": "Test User",
+    "email": "letsmailashiya@gmail.com",
+    "password": "TestPassword123!"
+}
+
+### Test user login
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "letsmailashiya@gmail.com",
+    "password": "TestPassword123!"
+}
