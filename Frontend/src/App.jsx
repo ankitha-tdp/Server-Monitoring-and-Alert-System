@@ -1,8 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { INITIAL_USERS, INITIAL_DEVICES, generateInitialSeries } from './data/mockData';
-import LoginRegister from './components/LoginRegister';
-import UserDashboard from './components/UserDashboard';
-import AdminDashboard from './components/AdminDashboard';
+import LoginRegister from './pages/LoginRegister';
+import UserDashboard from './pages/UserDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+
+const INITIAL_ALERT_RULES = [
+  {
+    id: 'r1',
+    deviceName: 'DESKTOP-DEV01',
+    metricLabel: 'CPU Utilization',
+    metricKey: 'cpu',
+    threshold: 80,
+    recipient: 'user@syspulse.dev',
+    cooldown: '15 mins',
+    enabled: true
+  },
+  {
+    id: 'r2',
+    deviceName: 'DESKTOP-DEV01',
+    metricLabel: 'Memory (RAM)',
+    metricKey: 'ram',
+    threshold: 85,
+    recipient: 'user@syspulse.dev',
+    cooldown: '1 hour',
+    enabled: true
+  },
+  {
+    id: 'r3',
+    deviceName: 'PROD-API-01',
+    metricLabel: 'CPU Utilization',
+    metricKey: 'cpu',
+    threshold: 85,
+    recipient: 'user@syspulse.dev',
+    cooldown: '15 mins',
+    enabled: true
+  },
+  {
+    id: 'r4',
+    deviceName: 'GPU-WORKER-01',
+    metricLabel: 'Memory (RAM)',
+    metricKey: 'ram',
+    threshold: 90,
+    recipient: 'ops-alerts@syspulse.dev',
+    cooldown: '30 mins',
+    enabled: true
+  }
+];
+
+const INITIAL_DISPATCHED_ALERTS = [
+  {
+    id: 'n1',
+    deviceName: 'PROD-API-01',
+    message: 'CPU Utilization reached 87.4% (Limit: 85%)',
+    recipient: 'user@syspulse.dev',
+    timeAgo: '3 mins ago',
+    unread: true
+  },
+  {
+    id: 'n2',
+    deviceName: 'GPU-WORKER-01',
+    message: 'CPU Utilization reached 91.2% (Limit: 85%)',
+    recipient: 'ops-alerts@syspulse.dev',
+    timeAgo: '19 mins ago',
+    unread: true
+  },
+  {
+    id: 'n3',
+    deviceName: 'EDGE-GATEWAY-04',
+    message: 'Heartbeat Offline reached Timeout (Limit: 60s)',
+    recipient: 'user@syspulse.dev',
+    timeAgo: '1 hour ago',
+    unread: false
+  }
+];
 
 export default function App() {
   const [users, setUsers] = useState(INITIAL_USERS);
@@ -28,6 +98,9 @@ export default function App() {
   }));
 
   const [globalInfluxHistory, setGlobalInfluxHistory] = useState(() => generateInitialSeries(44, 64, 28));
+
+  const [alertRules, setAlertRules] = useState(INITIAL_ALERT_RULES);
+  const [dispatchedAlerts, setDispatchedAlerts] = useState(INITIAL_DISPATCHED_ALERTS);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newDeviceName, setNewDeviceName] = useState('');
@@ -255,9 +328,9 @@ export default function App() {
         regUsername={regUsername}
         setRegUsername={setRegUsername}
         regEmail={regEmail}
-        setRegEmail={setRegEmail}
+        setRegEmail={regEmail}
         regPassword={regPassword}
-        setRegPassword={setRegPassword}
+        setRegPassword={regPassword}
         regRole={regRole}
         setRegRole={setRegRole}
         authError={authError}
@@ -290,6 +363,10 @@ export default function App() {
         getPowerShellCommand={getPowerShellCommand}
         handleCopyCommand={handleCopyCommand}
         handleLogout={handleLogout}
+        alertRules={alertRules}
+        setAlertRules={setAlertRules}
+        dispatchedAlerts={dispatchedAlerts}
+        setDispatchedAlerts={setDispatchedAlerts}
       />
     );
   }
