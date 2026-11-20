@@ -1,6 +1,6 @@
-import { supabase } from '../config/supabase.js';
+import  supabase  from '../config/supabase.js';
 import { generateTelegrafSetupScript } from '../utils/generateTelegrafScript.js';
-import crypto from 'crypto';
+import { fetchDevicesByRole } from '../services/devices.services.js';
 
 // POST /api/devices - Aligned with schema columns
 export const registerDevice = async (req, res) => {
@@ -27,7 +27,7 @@ export const registerDevice = async (req, res) => {
       }])
       .select();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message );
 
     return res.status(201).json({
       success: true,
@@ -40,18 +40,18 @@ export const registerDevice = async (req, res) => {
   }
 };
 
-// GET /api/devices/script/:id
+// GET /api/devices/script/:deviceId
 export const getDeviceScript = (req, res) => {
   try {
-    const { id } = req.params; // Using schema primary key 'id'
+    const { deviceId } = req.params; // Using schema primary key 'id'
 
-    if (!id) {
+    if (!deviceId) {
       return res.status(400).send('# Error: Device ID is required');
     }
 
     // Using the device UUID as the global tag in Telegraf
     const script = generateTelegrafSetupScript(
-      id,
+      deviceId,
       process.env.INFLUX_URL,
       process.env.INFLUX_TOKEN,
       process.env.INFLUX_ORG,
@@ -66,16 +66,16 @@ export const getDeviceScript = (req, res) => {
   }
 };
 
-// PATCH /api/devices/:id - Aligned with schema
+// PATCH /api/devices/:deviceId - Aligned with schema
 export const updateDevice = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { deviceId } = req.params;
     const { device_name, agent_status } = req.body;
 
     const { data, error } = await supabase
       .from('devices')
       .update({ device_name, agent_status })
-      .eq('id', id)
+      .eq('id', deviceId)
       .select();
 
     if (error) throw new Error(error.message);
@@ -94,23 +94,47 @@ export const updateDevice = async (req, res) => {
   }
 };
 
-// DELETE /api/devices/:id - Aligned with schema
+// DELETE /api/devices/:deviceId - Aligned with schema
 export const deleteDevice = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { deviceId } = req.params;
 
     const { error } = await supabase
       .from('devices')
       .delete()
-      .eq('id', id);
+      .eq('id', deviceId);
 
     if (error) throw new Error(error.message);
 
     return res.status(200).json({
       success: true,
-      message: `Device ${id} deleted successfully`,
+      message: `Device ${deviceId} deleted successfully`,
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getDevices = async (req, res) => {
+  try {
+    // Supports ?user_id=... or x-user-id header for Hoppscotch testing (or req.user.id once auth middleware is added)
+    const userId = req.user?.id || req.query.user_id || req.headers['x-user-id'];
+
+    if (!userId || userId === 'undefined') {
+      return res.status(400).json({ error: 'Valid user_id is required' });
+    }
+
+    const result = await fetchDevicesByRole(userId);
+
+    return res.status(200).json({
+      role: result.role,
+      count: result.devices.length,
+      devices: result.devices,
+    });
+  } catch (err) {
+    console.error('Error in getDevices:', err);
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || 'Internal server error' });
   }
 };

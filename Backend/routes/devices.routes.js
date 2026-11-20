@@ -3,12 +3,14 @@ import {
   registerDevice, 
   getDeviceScript, 
   updateDevice, 
-  deleteDevice 
-} from '../controllers/deviceController.js';
+  deleteDevice,
+  getDevices
+} from '../controllers/devices.controllers.js';
 
 const router = express.Router();
 
 router.post('/', registerDevice);
+router.get('/', getDevices);
 router.get('/script/:deviceId', getDeviceScript);
 router.patch('/:deviceId', updateDevice);   
 router.delete('/:deviceId', deleteDevice); 
