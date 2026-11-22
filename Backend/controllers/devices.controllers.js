@@ -5,7 +5,7 @@ import { fetchDevicesByRole } from '../services/devices.services.js';
 // POST /api/devices - Aligned with schema columns
 export const registerDevice = async (req, res) => {
   try {
-    const { device_name, hostname, ip_address, user_id, os_name, os_version } = req.body;
+    const { device_name, hostname, ip_address, os_name, os_version } = req.body;
 
     if (!device_name || !hostname) {
       return res.status(400).json({ 
@@ -17,7 +17,7 @@ export const registerDevice = async (req, res) => {
     const { data, error } = await supabase
       .from('devices')
       .insert([{
-        user_id: user_id || null,
+        user_id: req.user.id,
         device_name,
         hostname,
         ip_address: ip_address || null,
@@ -41,13 +41,24 @@ export const registerDevice = async (req, res) => {
 };
 
 // GET /api/devices/script/:deviceId
-export const getDeviceScript = (req, res) => {
-  try {
+export const getDeviceScript = async (req, res) => {
+    try {
     const { deviceId } = req.params; // Using schema primary key 'id'
 
     if (!deviceId) {
       return res.status(400).send('# Error: Device ID is required');
     }
+
+    const { data: device, error } = await supabase
+        .from('devices')
+        .select('id')
+        .eq('id', deviceId)
+        .eq('user_id', req.user.id)
+        .single();
+
+      if (error || !device) {
+        return res.status(404).send('# Error: Device not found');
+      }
 
     // Using the device UUID as the global tag in Telegraf
     const script = generateTelegrafSetupScript(
@@ -76,6 +87,7 @@ export const updateDevice = async (req, res) => {
       .from('devices')
       .update({ device_name, agent_status })
       .eq('id', deviceId)
+      .eq('user_id', req.user.id)
       .select();
 
     if (error) throw new Error(error.message);
@@ -102,7 +114,8 @@ export const deleteDevice = async (req, res) => {
     const { error } = await supabase
       .from('devices')
       .delete()
-      .eq('id', deviceId);
+      .eq('id', deviceId)
+      .eq('user_id', req.user.id);
 
     if (error) throw new Error(error.message);
 
@@ -117,8 +130,8 @@ export const deleteDevice = async (req, res) => {
 
 export const getDevices = async (req, res) => {
   try {
-    // Supports ?user_id=... or x-user-id header for Hoppscotch testing (or req.user.id once auth middleware is added)
-    const userId = req.user?.id || req.query.user_id || req.headers['x-user-id'];
+    // Get devices belonging to the authenticated user
+    const userId = req.user.id;
 
     if (!userId || userId === 'undefined') {
       return res.status(400).json({ error: 'Valid user_id is required' });

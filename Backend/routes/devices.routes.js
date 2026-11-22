@@ -6,8 +6,11 @@ import {
   deleteDevice,
   getDevices
 } from '../controllers/devices.controllers.js';
+import authenticateUser from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+
+router.use(authenticateUser);
 
 router.post('/', registerDevice);
 router.get('/', getDevices);
