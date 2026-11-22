@@ -8,8 +8,6 @@ import authRoutes from './routes/auth.routes.js';
 import metricRoutes from './routes/metrics.routes.js';
 import deviceRoutes from './routes/devices.routes.js';
 
-import metricRoutes from './routes/metrics.routes.js';
-import deviceRoutes from './routes/devices.routes.js'
 const app = express();
 const PORT = process.env.PORT || 5000;
 
