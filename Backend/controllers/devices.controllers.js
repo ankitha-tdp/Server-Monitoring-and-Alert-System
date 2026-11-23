@@ -1,6 +1,6 @@
 import  supabase  from '../config/supabase.js';
 import { generateTelegrafSetupScript } from '../utils/generateTelegrafScript.js';
-import { fetchDevicesByRole } from '../services/devices.services.js';
+import { fetchDevicesByRole, createDeviceWithSetupScript } from '../services/devices.services.js';
 
 // POST /api/devices - Aligned with schema columns
 export const registerDevice = async (req, res) => {

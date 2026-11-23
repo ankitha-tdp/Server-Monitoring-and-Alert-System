@@ -18,7 +18,7 @@ export const createDeviceWithSetupScript = async (deviceData, scriptConfig = {})
   const createdDevice = await insertDevice(deviceData);
 
   // Pass createdDevice (and any config your script helper needs)
-  const setupScript = yourTelegrafScriptFn(createdDevice, scriptConfig);
+  const setupScript = generateTelegrafSetupScript(createdDevice, scriptConfig);
 
   return {
     device: createdDevice,
