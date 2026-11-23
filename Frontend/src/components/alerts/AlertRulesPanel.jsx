@@ -1,7 +1,12 @@
 ﻿import React from 'react';
 import { Mail, Plus, Trash2 } from 'lucide-react';
 
-export default function AlertRulesPanel({ rules = [], onOpenRuleModal, onToggleRule, onDeleteRule }) {
+export default function AlertRulesPanel({
+  rules = [],
+  onOpenRuleModal,
+  onToggleRule,
+  onDeleteRule
+}) {
   return (
     <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -33,7 +38,9 @@ export default function AlertRulesPanel({ rules = [], onOpenRuleModal, onToggleR
           >
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-bold font-mono text-xs text-white truncate">{rule.deviceName}</span>
+                <span className="font-bold font-mono text-xs text-white truncate">
+                  {rule.deviceName}
+                </span>
                 <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 font-mono text-[11px] text-amber-400">
                   {rule.metricLabel} &gt; {rule.threshold}%
                 </span>
@@ -49,10 +56,15 @@ export default function AlertRulesPanel({ rules = [], onOpenRuleModal, onToggleR
                 role="switch"
                 aria-checked={rule.enabled}
                 onClick={() => onToggleRule(rule.id)}
-                className={w-10 h-5 rounded-full p-0.5 transition-colors }
+                className={`w-10 h-5 rounded-full p-0.5 transition-colors ${
+                  rule.enabled ? 'bg-emerald-500' : 'bg-slate-700'
+                }`}
+                title={rule.enabled ? 'Disable rule' : 'Enable rule'}
               >
                 <span
-                  className={lock w-4 h-4 rounded-full bg-white transition-transform }
+                  className={`block w-4 h-4 rounded-full bg-white transition-transform ${
+                    rule.enabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
                 />
               </button>
 
@@ -60,6 +72,7 @@ export default function AlertRulesPanel({ rules = [], onOpenRuleModal, onToggleR
                 type="button"
                 onClick={() => onDeleteRule(rule.id)}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition-colors"
+                title="Delete alert rule"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

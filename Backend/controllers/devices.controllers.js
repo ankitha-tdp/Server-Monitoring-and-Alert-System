@@ -1,38 +1,51 @@
 import  supabase  from '../config/supabase.js';
 import { generateTelegrafSetupScript } from '../utils/generateTelegrafScript.js';
-import { fetchDevicesByRole } from '../services/devices.services.js';
+import { fetchDevicesByRole, createDeviceWithSetupScript } from '../services/devices.services.js';
 
 // POST /api/devices - Aligned with schema columns
 export const registerDevice = async (req, res) => {
   try {
     const { device_name, hostname, ip_address, os_name, os_version } = req.body;
+    const userId = req.user?.id;
 
-    if (!device_name || !hostname) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'device_name and hostname are required' 
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'user_id is required',
       });
     }
 
-    const { data, error } = await supabase
-      .from('devices')
-      .insert([{
-        user_id: req.user.id,
+    if (!device_name || !hostname) {
+      return res.status(400).json({
+        success: false,
+        error: 'device_name and hostname are required',
+      });
+    }
+
+    const { device, setupScript } = await createDeviceWithSetupScript(
+      {
+        user_id: userId,
         device_name,
         hostname,
         ip_address: ip_address || null,
         os_name: os_name || 'Windows',
         os_version: os_version || '11',
         agent_status: 'online',
-      }])
-      .select();
-
-    if (error) throw new Error(error.message );
+      },
+      {
+        telegrafVersion: process.env.TELEGRAF_VERSION,
+        influxUrl: process.env.INFLUX_URL,
+        influxOrg: process.env.INFLUX_ORG,
+        influxBucket: process.env.INFLUX_BUCKET,
+        influxToken: process.env.INFLUX_TOKEN,
+      }
+    );
 
     return res.status(201).json({
       success: true,
       message: 'Device registered successfully',
-      data: data[0],
+      data: device,
+      setup_script: setupScript,
     });
   } catch (error) {
     console.error('Error in registerDevice:', error);

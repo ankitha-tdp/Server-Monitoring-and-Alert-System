@@ -100,3 +100,54 @@ export const generateInitialSeries = (baseCpu = 35, baseRam = 60, baseDisk = 20)
     };
   });
 };
+
+
+export const DEFAULT_ALERTS = [
+  {
+    id: 'n1',
+    deviceName: 'PROD-API-01',
+    message: 'CPU Utilization reached 87.4% (Limit: 85%)',
+    recipient: 'user@syspulse.dev',
+    timeAgo: '3 mins ago',
+    unread: true
+  },
+  {
+    id: 'n2',
+    deviceName: 'GPU-WORKER-01',
+    message: 'CPU Utilization reached 91.2% (Limit: 85%)',
+    recipient: 'ops-alerts@syspulse.dev',
+    timeAgo: '19 mins ago',
+    unread: true
+  },
+  {
+    id: 'n3',
+    deviceName: 'EDGE-GATEWAY-04',
+    message: 'Heartbeat Offline reached Timeout (Limit: 60s)',
+    recipient: 'user@syspulse.dev',
+    timeAgo: '1 hour ago',
+    unread: false
+  }
+];
+
+export const DEFAULT_RULES = [
+  {
+    id: 'r1',
+    deviceName: 'DESKTOP-DEV01',
+    metricLabel: 'CPU Utilization',
+    metricKey: 'cpu',
+    threshold: 80,
+    recipient: 'user@syspulse.dev',
+    cooldown: '15 mins',
+    enabled: true
+  },
+  {
+    id: 'r2',
+    deviceName: 'DESKTOP-DEV01',
+    metricLabel: 'Memory (RAM)',
+    metricKey: 'ram',
+    threshold: 85,
+    recipient: 'user@syspulse.dev',
+    cooldown: '1 hour',
+    enabled: true
+  }
+];

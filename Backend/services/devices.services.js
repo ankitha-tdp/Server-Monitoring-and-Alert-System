@@ -1,4 +1,5 @@
 import supabase from '../config/supabase.js';
+import { generateTelegrafSetupScript } from '../utils/generateTelegrafScript.js';
 
 export const insertDevice = async (deviceData) => {
   const { data, error } = await supabase
@@ -11,6 +12,18 @@ export const insertDevice = async (deviceData) => {
   }
 
   return data[0];
+};
+
+export const createDeviceWithSetupScript = async (deviceData, scriptConfig = {}) => {
+  const createdDevice = await insertDevice(deviceData);
+
+  // Pass createdDevice (and any config your script helper needs)
+  const setupScript = generateTelegrafSetupScript(createdDevice, scriptConfig);
+
+  return {
+    device: createdDevice,
+    setupScript,
+  };
 };
 
 export const fetchDevicesByRole = async (userId) => {

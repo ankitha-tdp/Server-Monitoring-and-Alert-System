@@ -13,7 +13,7 @@ export default function DeviceSidebar({
   filter = 'all',
   onFilterChange,
   onOpenAddModal,
-  isAlertDevice = () => false
+  isAlertDevice = () => false,
 }) {
   return (
     <aside className="w-full lg:w-72 shrink-0 rounded-2xl bg-slate-900/90 border border-slate-800 p-4 space-y-3.5">
@@ -47,21 +47,33 @@ export default function DeviceSidebar({
         <button
           type="button"
           onClick={() => onFilterChange('all')}
-          className={py-1.5 rounded-lg border transition-colors }
+          className={`py-1.5 rounded-lg border transition-colors ${
+            filter === 'all'
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+              : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
         >
           All ({totalCount})
         </button>
         <button
           type="button"
           onClick={() => onFilterChange('online')}
-          className={py-1.5 rounded-lg border transition-colors }
+          className={`py-1.5 rounded-lg border transition-colors ${
+            filter === 'online'
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+              : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
         >
           Online ({onlineCount})
         </button>
         <button
           type="button"
           onClick={() => onFilterChange('alert')}
-          className={py-1.5 rounded-lg border transition-colors }
+          className={`py-1.5 rounded-lg border transition-colors ${
+            filter === 'alert'
+              ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+              : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
         >
           Alert ({alertCount})
         </button>
@@ -71,19 +83,32 @@ export default function DeviceSidebar({
         {devices.map((dev) => {
           const isSelected = dev.id === selectedDeviceId;
           const devAlert = isAlertDevice(dev);
+          const isOffline = dev.status !== 'online';
+          const statusLabel = isOffline ? 'offline' : devAlert ? 'warning' : 'online';
+
           return (
             <button
               key={dev.id}
               type="button"
               onClick={() => onSelectDevice(dev.id)}
-              className={w-full text-left p-3 rounded-xl border transition-all }
+              className={`w-full text-left p-3 rounded-xl border transition-all ${
+                isSelected
+                  ? 'bg-slate-800/90 border-emerald-500/50 text-white'
+                  : 'bg-slate-950/60 border-slate-800/80 text-slate-300 hover:border-slate-700'
+              }`}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-bold text-xs truncate">{dev.name}</span>
                 <span
-                  className={inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full }
+                  className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                    isOffline
+                      ? 'bg-slate-800 text-slate-400'
+                      : devAlert
+                        ? 'bg-amber-500/15 text-amber-300'
+                        : 'bg-emerald-500/15 text-emerald-300'
+                  }`}
                 >
-                  {dev.status !== 'online' ? 'offline' : devAlert ? 'warning' : 'online'}
+                  {statusLabel}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 mt-1">
