@@ -24,25 +24,6 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// Temporary database test route
-app.get('/test-db', async (req, res) => {
-    const { error } = await supabase
-        .from('profiles')
-        .select('id')
-        .limit(1);
-
-    if (error) {
-        console.error('Supabase error:', error.message);
-        return res.status(500).json({
-            message: 'Database connection failed'
-        });
-    }
-
-    res.json({
-        message: 'Supabase connection successful!'
-    });
-});
-
 // Register API Routes
 app.use('/api/auth', authRoutes);
 // API Routes
