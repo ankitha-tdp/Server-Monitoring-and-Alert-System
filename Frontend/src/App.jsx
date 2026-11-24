@@ -3,6 +3,8 @@ import { INITIAL_USERS, INITIAL_DEVICES, generateInitialSeries } from './data/mo
 import LoginRegister from './pages/LoginRegister';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import { loginUser, registerUser, getCurrentUser } from './api/authApi';
+import { getDevices } from './api/deviceApi';
 
 const INITIAL_ALERT_RULES = [
   {
@@ -79,6 +81,8 @@ export default function App() {
   const [devices, setDevices] = useState(INITIAL_DEVICES);
   const [currentUser, setCurrentUser] = useState(null);
 
+  const [session, setSession] = useState(null);
+
   const [authMode, setAuthMode] = useState('login');
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -146,6 +150,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+  const loadDevices = async () => {
+    if (!session?.access_token) return;
+
+    try {
+      const fetchedDevices = await getDevices(session.access_token);
+      setDevices(fetchedDevices);
+      if (fetchedDevices.length > 0) {
+        setSelectedDeviceId(fetchedDevices[0].id);
+      }
+    } catch (error) {
+      setAuthError(error.message || 'Failed to load devices');
+    }
+  };
+
+  loadDevices();
+}, [session]);
+
+  useEffect(() => {
     if (currentUser && currentUser.role === 'user') {
       const userDevs = devices.filter((d) => d.userId === currentUser.id);
       if (userDevs.length > 0 && !userDevs.some((d) => d.id === selectedDeviceId)) {
@@ -167,92 +189,53 @@ export default function App() {
     }
   };
 
-  const handleLoginSubmit = (e) => {
-    e.preventDefault();
-    setAuthError('');
-    setAuthSuccess('');
+const handleLoginSubmit = async (e) => {
+  e.preventDefault();
+  setAuthError('');
+  setAuthSuccess('');
 
-    const trimmed = loginIdentifier.trim().toLowerCase();
-    const matchedUser = users.find(
-      (u) => (u.username.toLowerCase() === trimmed || u.email.toLowerCase() === trimmed) && u.password === loginPassword
+  try {
+    const result = await loginUser(loginIdentifier.trim(), loginPassword);
+
+    const profile = await getCurrentUser(result.session.access_token);
+
+    setCurrentUser(profile);
+    setSession(result.session);
+    setLoginPassword('');
+  } catch (error) {
+    setAuthError(error.message || 'Login failed');
+  }
+};
+
+  const handleRegisterSubmit = async (e) => {
+  e.preventDefault();
+  setAuthError('');
+  setAuthSuccess('');
+
+  try {
+    await registerUser(
+      regUsername.trim(),
+      regEmail.trim(),
+      regPassword
     );
 
-    if (!matchedUser) {
-      setAuthError('Invalid username/email or password. Use quick-fill buttons below!');
-      return;
-    }
-    if (matchedUser.status === 'suspended') {
-      setAuthError('This account has been suspended.');
-      return;
-    }
+    setAuthSuccess(
+      'Registration successful. Check your email to confirm your account before logging in.'
+    );
 
-    setCurrentUser(matchedUser);
-    setLoginIdentifier('');
-    setLoginPassword('');
-  };
-
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault();
-    setAuthError('');
-    setAuthSuccess('');
-
-    const cleanUsername = regUsername.trim();
-    const cleanEmail = regEmail.trim().toLowerCase();
-
-    if (!cleanUsername || !cleanEmail || !regPassword) {
-      setAuthError('Please fill in all fields.');
-      return;
-    }
-
-    const exists = users.some((u) => u.username.toLowerCase() === cleanUsername.toLowerCase() || u.email.toLowerCase() === cleanEmail);
-    if (exists) {
-      setAuthError('Username or email is already registered.');
-      return;
-    }
-
-    const newUser = {
-      id: `usr_${Date.now().toString().slice(-5)}`,
-      username: cleanUsername,
-      email: cleanEmail,
-      password: regPassword,
-      role: regRole,
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setUsers((prev) => [...prev, newUser]);
-
-    if (regRole === 'user') {
-      const starterDevId = `dev_win_${Math.floor(1000 + Math.random() * 9000)}`;
-      const starterDevice = {
-        id: starterDevId,
-        userId: newUser.id,
-        ownerName: newUser.username,
-        name: `${cleanUsername.toUpperCase()}-PC`,
-        os: 'Windows 11 Pro (x64)',
-        ip: `192.168.1.${Math.floor(50 + Math.random() * 180)}`,
-        status: 'online',
-        cpu: 24.5,
-        ram: 46.0,
-        disk: 14.2,
-        uptime: '0d 01h 12m',
-        lastSeen: 'Just now'
-      };
-      setDevices((prev) => [...prev, starterDevice]);
-      setDeviceHistory((prev) => ({ ...prev, [starterDevId]: generateInitialSeries(24.5, 46.0, 14.2) }));
-    }
-
-    setAuthSuccess(`Account "${cleanUsername}" created! You can now log in.`);
-    setLoginIdentifier(cleanUsername);
-    setLoginPassword(regPassword);
+    setAuthMode('login');
+    setLoginIdentifier(regEmail.trim());
     setRegUsername('');
     setRegEmail('');
     setRegPassword('');
-    setAuthMode('login');
-  };
+  } catch (error) {
+    setAuthError(error.message || 'Registration failed');
+  }
+};
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setSession(null);
     setAuthError('');
     setAuthSuccess('');
   };
@@ -346,7 +329,9 @@ export default function App() {
     return (
       <UserDashboard
         currentUser={currentUser}
+        session={session}
         devices={devices}
+        setDevices={setDevices}
         selectedDeviceId={selectedDeviceId}
         setSelectedDeviceId={setSelectedDeviceId}
         deviceHistory={deviceHistory}
