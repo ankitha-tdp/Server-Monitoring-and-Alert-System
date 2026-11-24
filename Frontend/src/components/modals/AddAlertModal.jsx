@@ -4,9 +4,10 @@ import { Mail, X } from 'lucide-react';
 export default function AddAlertModal({
   isOpen,
   onClose,
+  alertError,
   devices = [],
-  ruleDeviceName,
-  setRuleDeviceName,
+  ruleDeviceId,
+  setRuleDeviceId,
   ruleMetric,
   setRuleMetric,
   ruleThreshold,
@@ -37,23 +38,25 @@ export default function AddAlertModal({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4 text-xs">
+          {alertError && (
+  <p className="text-red-400 text-xs bg-red-500/10 p-3 rounded-lg">
+    {alertError}
+  </p>
+)}
           <div>
             <label className="block font-medium text-slate-300 mb-1.5">Target Device</label>
             <select
-              value={ruleDeviceName}
-              onChange={(e) => setRuleDeviceName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-500"
-            >
-              {devices.length > 0 ? (
-                devices.map((d) => (
-                  <option key={d.id} value={d.name}>
-                    {d.name} ({d.id})
-                  </option>
-                ))
-              ) : (
-                <option value="DESKTOP-DEV01">DESKTOP-DEV01</option>
-              )}
-            </select>
+  value={ruleDeviceId}
+  onChange={(e) => setRuleDeviceId(e.target.value)}
+  required
+  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white"
+>
+  {devices.map((d) => (
+    <option key={d.id} value={d.id}>
+      {d.name || d.device_name} ({d.id})
+    </option>
+  ))}
+</select>
           </div>
 
           <div>
@@ -61,7 +64,7 @@ export default function AddAlertModal({
             <div className="grid grid-cols-3 gap-2">
               {[
                 { key: 'cpu', label: 'CPU (%)' },
-                { key: 'ram', label: 'RAM (%)' },
+                { key: 'memory', label: 'RAM (%)' },
                 { key: 'disk', label: 'Disk (%)' }
               ].map((m) => (
                 <button
@@ -123,10 +126,10 @@ export default function AddAlertModal({
               onChange={(e) => setRuleCooldown(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-amber-500"
             >
-              <option value="5 minutes">5 minutes</option>
-              <option value="15 minutes">15 minutes</option>
-              <option value="30 minutes">30 minutes</option>
-              <option value="1 hour">1 hour</option>
+              <option value="5">5 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
             </select>
           </div>
 
