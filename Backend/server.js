@@ -7,6 +7,7 @@ import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
 import metricRoutes from './routes/metrics.routes.js';
 import deviceRoutes from './routes/devices.routes.js';
+import alertRoutes from './routes/alerts.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 // API Routes
 app.use('/api/metrics', metricRoutes);
 app.use('/api/devices', deviceRoutes);
+app.use('/api/alerts', alertRoutes);
 
 // Global Error Handler Catch-all
 app.use((err, req, res, next) => {

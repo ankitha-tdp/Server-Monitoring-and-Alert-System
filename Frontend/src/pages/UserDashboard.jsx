@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Monitor, Mail } from 'lucide-react';
 import TopNavbar from '../components/layout/TopNavbar';
 import FleetSummaryBar from '../components/layout/FleetSummaryBar';
@@ -8,6 +8,13 @@ import AlertRulesPanel from '../components/alerts/AlertRulesPanel';
 import AddDeviceModal from '../components/modals/AddDeviceModal';
 import AddAlertModal from '../components/modals/AddAlertModal';
 import { createDevice } from '../api/deviceApi';
+import {
+  createAlertRule,
+  getAlertRules,
+  getAlerts,
+  updateAlertRule,
+  deleteAlertRule
+} from '../api/alertApi';
 import { DEFAULT_ALERTS, DEFAULT_RULES } from '../data/mockData';
 
 
@@ -59,6 +66,13 @@ export default function UserDashboard({
   const [fleetFilter, setFleetFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [ruleDeviceId, setRuleDeviceId] = useState('');
+  const [ruleMetric, setRuleMetric] = useState('cpu');
+  const [ruleThreshold, setRuleThreshold] = useState(80);
+  const [ruleEmail, setRuleEmail] = useState('');
+  const [ruleCooldown, setRuleCooldown] = useState('15');
+  const [alertError, setAlertError] = useState('');
+  const [submittingAlert, setSubmittingAlert] = useState(false);
 
   const [localDevices, setLocalDevices] = useState(devices);
   const [localRules, setLocalRules] = useState(DEFAULT_RULES);
@@ -127,11 +141,53 @@ export default function UserDashboard({
     setIsAddModalOpen(true);
   };
 
+  const handleOpenAlertModal = () => {
+  setAlertError('');
+  setRuleDeviceId(activeDevice?.id || fleetSource[0]?.id || '');
+  setIsAlertModalOpen(true);
+};
+
   async function resolveAccessToken() {
     if (session?.access_token) return session.access_token;
     if (currentUser?.access_token) return currentUser.access_token;
     return '';
   }
+
+  useEffect(() => {
+  async function loadAlertRules() {
+    try {
+      const token = await resolveAccessToken();
+
+      if (!token) return;
+
+      const result = await getAlertRules(token);
+
+      const formattedRules = (result.rules || []).map((rule) => {
+        const device = deviceList.find(
+          (d) => d.id === rule.device_id
+        );
+
+        return {
+          id: rule.id,
+          deviceName: device?.name || device?.device_name || 'Unknown Device',
+          metricLabel: rule.metric_type.toUpperCase(),
+          metricKey: rule.metric_type,
+          threshold: rule.threshold_value,
+          recipient: 'Not configured',
+          cooldown: `${rule.cooldown_minutes ?? 15} minutes`,
+          enabled: rule.is_enabled
+        };
+      });
+
+      setRules(formattedRules);
+    } catch (error) {
+      console.error('Failed to load alert rules:', error.message);
+      setAlertError('Could not load saved alert rules');
+    }
+  }
+
+  loadAlertRules();
+}, [session?.access_token, currentUser?.access_token, deviceList]);
 
   async function onAddDeviceSubmit(e) {
     e.preventDefault();
@@ -169,6 +225,97 @@ export default function UserDashboard({
       setSubmittingDevice(false);
     }
   }
+
+  async function onAddAlertSubmit(e) {
+  e.preventDefault();
+
+  const selectedDeviceId =
+  ruleDeviceId || activeDevice?.id || fleetSource[0]?.id;
+
+if (!selectedDeviceId) {
+  setAlertError('No registered device found');
+  return;
+}
+
+  try {
+    setSubmittingAlert(true);
+    setAlertError('');
+
+    const token = await resolveAccessToken();
+
+    const payload = {
+      device_id: selectedDeviceId,
+      metric_type: ruleMetric,
+      operator: '>',
+      threshold_value: Number(ruleThreshold),
+      severity: 'warning',
+      cooldown_minutes: Number(ruleCooldown)
+    };
+
+    const result = await createAlertRule(payload, token);
+
+    const savedRule = result.rule;
+const selectedDevice = fleetSource.find(
+  (device) => device.id === savedRule.device_id
+);
+
+const newRule = {
+  id: savedRule.id,
+  deviceName: selectedDevice?.name || selectedDevice?.device_name || 'Device',
+  metricLabel: savedRule.metric_type.toUpperCase(),
+  metricKey: savedRule.metric_type,
+  threshold: savedRule.threshold_value,
+  recipient: ruleEmail || 'Not configured',
+  cooldown: `${savedRule.cooldown_minutes} minutes`,
+  enabled: savedRule.is_enabled
+};
+
+setRules((prev) => [newRule, ...prev]);
+
+    setIsAlertModalOpen(false);
+  } catch (err) {
+    setAlertError(err.message || 'Failed to create alert rule');
+  } finally {
+    setSubmittingAlert(false);
+  }
+}
+
+async function handleToggleAlertRule(ruleId) {
+  const rule = rules.find((r) => r.id === ruleId);
+  if (!rule) return;
+
+  try {
+    const token = await resolveAccessToken();
+
+    await updateAlertRule(
+      ruleId,
+      { is_enabled: !rule.enabled },
+      token
+    );
+
+    setRules((prev) =>
+      prev.map((r) =>
+        r.id === ruleId
+          ? { ...r, enabled: !r.enabled }
+          : r
+      )
+    );
+  } catch (error) {
+    setAlertError(error.message || 'Failed to update alert rule');
+  }
+}
+
+async function handleDeleteAlertRule(ruleId) {
+  try {
+    const token = await resolveAccessToken();
+
+    await deleteAlertRule(ruleId, token);
+
+    setRules((prev) => prev.filter((r) => r.id !== ruleId));
+  } catch (error) {
+    setAlertError(error.message || 'Failed to delete alert rule');
+  }
+}
 
   async function handleCopyCommand() {
     if (onCopyCommand) {
@@ -238,7 +385,7 @@ export default function UserDashboard({
 
                   <button
                     type="button"
-                    onClick={() => setIsAlertModalOpen(true)}
+                    onClick={handleOpenAlertModal}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-medium shrink-0 transition-all"
                   >
                     <Mail className="w-3.5 h-3.5 text-amber-400" />
@@ -260,15 +407,9 @@ export default function UserDashboard({
 
             <AlertRulesPanel
               rules={rules}
-              onOpenRuleModal={() => setIsAlertModalOpen(true)}
-              onToggleRule={(ruleId) =>
-                setRules((prev) =>
-                  prev.map((r) => (r.id === ruleId ? { ...r, enabled: !r.enabled } : r))
-                )
-              }
-              onDeleteRule={(ruleId) =>
-                setRules((prev) => prev.filter((r) => r.id !== ruleId))
-              }
+              onOpenRuleModal={handleOpenAlertModal}
+              onToggleRule={handleToggleAlertRule}
+              onDeleteRule={handleDeleteAlertRule}
             />
           </div>
         </div>
@@ -299,15 +440,19 @@ export default function UserDashboard({
       <AddAlertModal
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
-        defaultDeviceName={
-          activeDevice?.name ||
-          activeDevice?.device_name ||
-          fleetSource[0]?.name ||
-          fleetSource[0]?.device_name ||
-          'DESKTOP-DEV01'
-        }
-        defaultEmail={currentUser?.email || 'user@syspulse.dev'}
-        onSaveRule={(newRule) => setRules((prev) => [newRule, ...prev])}
+        devices={fleetSource}
+        ruleDeviceId={ruleDeviceId}
+        setRuleDeviceId={setRuleDeviceId}
+        ruleMetric={ruleMetric}
+        setRuleMetric={setRuleMetric}
+        ruleThreshold={ruleThreshold}
+        setRuleThreshold={setRuleThreshold}
+        ruleEmail={ruleEmail}
+        setRuleEmail={setRuleEmail}
+        ruleCooldown={ruleCooldown}
+        setRuleCooldown={setRuleCooldown}
+        onSubmit={onAddAlertSubmit}
+        alertError={alertError}
       />
     </div>
   );
