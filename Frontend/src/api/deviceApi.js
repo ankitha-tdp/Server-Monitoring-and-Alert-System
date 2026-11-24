@@ -24,7 +24,14 @@ export async function getDevices(accessToken) {
   });
 
   const data = await handleResponse(res);
-  return data.devices ?? [];
+ return (data.devices ?? []).map((device) => ({
+  ...device,
+  name: device.device_name,
+  status: device.agent_status,
+  ip: device.ip_address,
+  os: device.os_name,
+  userId: device.user_id,
+}));
 }
 
 // 2. POST register a new device + receive generated Telegraf setup script

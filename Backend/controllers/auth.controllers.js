@@ -1,5 +1,6 @@
 
 import { registerUser, loginUser } from '../services/auth.services.js';
+import supabase from '../config/supabase.js';
 
 // Handle user registration
 export const register = async (req, res) => {
@@ -53,6 +54,37 @@ export const login = async (req, res) => {
 
         return res.status(401).json({
             message: 'Invalid email or password'
+        });
+    }
+};
+
+// Get authenticated user's profile
+export const getMe = async (req, res) => {
+    try {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', req.user.id)
+            .single();
+
+        if (error || !profile) {
+            return res.status(404).json({
+                message: 'User profile not found'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'User authenticated successfully',
+            user: {
+                ...req.user,
+                role: profile.role
+            }
+        });
+
+    } catch (error) {
+        console.error('Profile fetch error:', error.message);
+        return res.status(500).json({
+            message: 'Failed to fetch user profile'
         });
     }
 };
