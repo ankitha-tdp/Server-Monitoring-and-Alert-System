@@ -16,7 +16,7 @@ import {
   deleteDevice,
   downloadDeviceConfig
 } from '../api/deviceApi';
-import { getDeviceTelemetry } from '../api/telemetryApi';
+import { getDeviceTelemetry } from '../api/metricsApi';
 import {
   createAlertRule,
   getAlertRules,
@@ -43,18 +43,48 @@ function toHostname(name = '') {
   return cleaned || 'WORKSTATION-01';
 }
 
-function normalizeTelemetryPoints(rawPoints = []) {
-  return rawPoints.map((pt, idx) => ({
-    time:
-      pt.time ||
-      pt._time ||
-      pt.timestamp ||
-      new Date(Date.now() - (rawPoints.length - idx) * 10000).toLocaleTimeString(),
-    cpu: Number(pt.cpu ?? pt.cpu_usage ?? pt.usage_user ?? 0),
-    ram: Number(pt.ram ?? pt.mem_used_percent ?? pt.used_percent ?? 0),
-    disk: Number(pt.disk ?? pt.disk_used_percent ?? 0),
-  }));
+
+function normalizeTelemetryPoints(raw) {
+  // Handle the response from the backend:
+  // { cpu: [...], memory: [...], disk: [...] }
+
+  const telemetry = raw?.data || raw;
+
+  if (!telemetry || Array.isArray(telemetry)) {
+    return [];
+  }
+
+  const pointsByTime = new Map();
+
+  const addMetric = (metricPoints, metricName) => {
+    if (!Array.isArray(metricPoints)) return;
+
+    metricPoints.forEach((point) => {
+      const time = point.time || point._time || point.timestamp;
+      if (!time) return;
+
+      if (!pointsByTime.has(time)) {
+        pointsByTime.set(time, {
+          time,
+          cpu: null,
+          ram: null,
+          disk: null,
+        });
+      }
+
+      pointsByTime.get(time)[metricName] = Number(point.value ?? point._value);
+    });
+  };
+
+  addMetric(telemetry.cpu, 'cpu');
+  addMetric(telemetry.memory, 'ram');
+  addMetric(telemetry.disk, 'disk');
+
+  return Array.from(pointsByTime.values()).sort(
+    (a, b) => new Date(a.time) - new Date(b.time)
+  );
 }
+
 
 export default function UserDashboard({
   currentUser,

@@ -53,8 +53,6 @@ export const generateTelegrafConfig = (
 [[inputs.mem]]
 
 [[inputs.disk]]
-  mount_points = ["C:\\\\"]
-
   ignore_fs = [
     "tmpfs",
     "devtmpfs",

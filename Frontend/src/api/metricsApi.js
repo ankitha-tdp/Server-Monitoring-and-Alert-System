@@ -10,7 +10,7 @@ export async function getDeviceTelemetry(deviceId, accessToken, range = '-1h') {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/api/telemetry/${encodeURIComponent(deviceId)}?${params.toString()}`,
+    `${API_BASE_URL}/api/metrics/${encodeURIComponent(deviceId)}?${params.toString()}`,
     { headers }
   );
 
