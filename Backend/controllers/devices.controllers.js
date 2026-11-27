@@ -37,7 +37,7 @@ export const registerDevice = async (req, res) => {
         influxUrl: process.env.INFLUX_URL,
         influxOrg: process.env.INFLUX_ORG,
         influxBucket: process.env.INFLUX_BUCKET,
-        influxToken: process.env.INFLUX_TOKEN,
+        influxToken: process.env.INFLUX_TOKEN_WRITE,
       }
     );
 
@@ -50,43 +50,6 @@ export const registerDevice = async (req, res) => {
   } catch (error) {
     console.error('Error in registerDevice:', error);
     return res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-// GET /api/devices/script/:deviceId
-export const getDeviceScript = async (req, res) => {
-    try {
-    const { deviceId } = req.params; // Using schema primary key 'id'
-
-    if (!deviceId) {
-      return res.status(400).send('# Error: Device ID is required');
-    }
-
-    const { data: device, error } = await supabase
-        .from('devices')
-        .select('id')
-        .eq('id', deviceId)
-        .eq('user_id', req.user.id)
-        .single();
-
-      if (error || !device) {
-        return res.status(404).send('# Error: Device not found');
-      }
-
-    // Using the device UUID as the global tag in Telegraf
-    const script = generateTelegrafSetupScript(
-      deviceId,
-      process.env.INFLUX_URL,
-      process.env.INFLUX_TOKEN,
-      process.env.INFLUX_ORG,
-      process.env.INFLUX_BUCKET
-    );
-
-    res.setHeader('Content-Type', 'text/plain');
-    return res.status(200).send(script);
-  } catch (error) {
-    console.error('Error generating script:', error);
-    return res.status(500).send('# Internal Server Error');
   }
 };
 
@@ -141,6 +104,7 @@ export const deleteDevice = async (req, res) => {
   }
 };
 
+//GET all devices of user
 export const getDevices = async (req, res) => {
   try {
     // Get devices belonging to the authenticated user
@@ -162,5 +126,43 @@ export const getDevices = async (req, res) => {
     return res
       .status(err.statusCode || 500)
       .json({ error: err.message || 'Internal server error' });
+  }
+};
+
+//------------------------------------------------------------------
+// GET /api/devices/script/:deviceId (to fetch registered dev script)
+export const getDeviceScript = async (req, res) => {
+    try {
+    const { deviceId } = req.params; // Using schema primary key 'id'
+
+    if (!deviceId) {
+      return res.status(400).send('# Error: Device ID is required');
+    }
+
+    const { data: device, error } = await supabase
+        .from('devices')
+        .select('id')
+        .eq('id', deviceId)
+        .eq('user_id', req.user.id)
+        .single();
+
+      if (error || !device) {
+        return res.status(404).send('# Error: Device not found');
+      }
+
+    // Using the device UUID as the global tag in Telegraf
+    const script = generateTelegrafSetupScript(
+      deviceId,
+      process.env.INFLUX_URL,
+      process.env.INFLUX_TOKEN_WRITE,
+      process.env.INFLUX_ORG,
+      process.env.INFLUX_BUCKET
+    );
+
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(200).send(script);
+  } catch (error) {
+    console.error('Error generating script:', error);
+    return res.status(500).send('# Internal Server Error');
   }
 };
