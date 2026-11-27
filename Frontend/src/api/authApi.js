@@ -57,3 +57,21 @@ export async function getCurrentUser(accessToken) {
 
   return data.user;
 }
+
+// Logout the current user
+export async function logoutUser(accessToken) {
+  const response = await fetch(`${AUTH_URL}/logout`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Logout failed');
+  }
+
+  return data;
+}

@@ -3,7 +3,7 @@ import { INITIAL_USERS, INITIAL_DEVICES, generateInitialSeries } from './data/mo
 import LoginRegister from './pages/LoginRegister';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
-import { loginUser, registerUser, getCurrentUser } from './api/authApi';
+import { loginUser, registerUser, getCurrentUser, logoutUser } from './api/authApi';
 import { getDevices } from './api/deviceApi';
 
 const INITIAL_ALERT_RULES = [
@@ -233,12 +233,20 @@ const handleLoginSubmit = async (e) => {
   }
 };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+  try {
+    if (session?.access_token) {
+      await logoutUser(session.access_token);
+    }
+  } catch (error) {
+    console.error('Logout error:', error.message);
+  } finally {
     setCurrentUser(null);
     setSession(null);
     setAuthError('');
     setAuthSuccess('');
-  };
+  }
+};
 
   const handleCreateDevice = (e) => {
     e.preventDefault();

@@ -1,5 +1,5 @@
 
-import { registerUser, loginUser } from '../services/auth.services.js';
+import { registerUser, loginUser, logoutUser } from '../services/auth.services.js';
 import supabase from '../config/supabase.js';
 
 // Handle user registration
@@ -86,5 +86,24 @@ export const getMe = async (req, res) => {
         return res.status(500).json({
             message: 'Failed to fetch user profile'
         });
+    }
+};
+
+export const logout = async (req, res) => {
+    try {
+        const accessToken = req.headers.authorization?.split(' ')[1];
+
+        if (!accessToken) {
+            return res.status(401).json({ message: 'Access token required' });
+        }
+
+        await logoutUser(accessToken);
+
+        return res.status(200).json({
+            message: 'Logout successful'
+        });
+    } catch (error) {
+        console.error('Logout error:', error.message);
+        return res.status(500).json({ message: 'Logout failed' });
     }
 };
