@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 const stopAgentCommand = 'Stop-Service -Name "telegraf" -Force';
+const deleteServiceCommand = 'sc.exe delete telegraf';
 
 export default function DeleteDeviceModal({
   isOpen,
@@ -37,6 +38,10 @@ export default function DeleteDeviceModal({
           </p>
 
           <p className="text-xs text-red-400 mt-2">
+            Run PowerShell as Administrator 
+          </p>
+
+          <p className="text-xs text-red-400 mt-2">
             This action cannot be undone.
           </p>
         </div>
@@ -49,6 +54,29 @@ export default function DeleteDeviceModal({
           <div className="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 rounded px-3 py-2">
             <code className="text-xs text-amber-400 font-mono truncate">
               {stopAgentCommand}
+            </code>
+            <button
+              type="button"
+              onClick={handleCopyStopCommand}
+              className="shrink-0 px-2 py-1 rounded text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+            >
+              {commandCopied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+
+          {/* <p className="text-[11px] text-slate-500">
+            Run this command on the device itself, not on the dashboard.
+          </p> */}
+        </div>
+
+        <div className="rounded-lg bg-slate-950 border border-slate-800 p-3 space-y-2">
+          <p className="text-xs text-slate-300">
+            To delete the Telegraf service on this device.
+          </p>
+
+          <div className="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 rounded px-3 py-2">
+            <code className="text-xs text-amber-400 font-mono truncate">
+              {deleteServiceCommand}
             </code>
             <button
               type="button"
@@ -91,3 +119,6 @@ export default function DeleteDeviceModal({
     </div>
   );
 }
+
+
+// sc.exe delete telegraf

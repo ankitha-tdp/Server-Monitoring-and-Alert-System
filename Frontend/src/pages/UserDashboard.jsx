@@ -281,7 +281,7 @@ export default function UserDashboard({
 
   async function onAddDeviceSubmit(e) {
     e.preventDefault();
-    const trimmedName = (newDeviceName || '').trim();
+    const trimmedName = (newDeviceName).trim();
     if (!trimmedName) return;
 
     try {
