@@ -299,14 +299,28 @@ export default function UserDashboard({
       };
 
       const result = await createDevice(payload, authToken);
-      const created = result.data || result.device;
+      const rawDevice = result.data || result.device;
 
-      if (created) {
-        setGeneratedDevice?.(created);
-        updateDevices((prev) => [created, ...prev]);
-        setSelectedDeviceId?.(created.id);
-      }
+    if (rawDevice) {
+      const created = {
+        ...rawDevice,
+        id: rawDevice.id,
+        name: rawDevice.device_name || rawDevice.name,
+        status: rawDevice.agent_status || 'offline',
+        ip: rawDevice.ip_address || rawDevice.ip || '',
+        os: rawDevice.os_name || rawDevice.os || 'Windows',
+        userId: rawDevice.user_id || rawDevice.userId,
+      };
 
+      setGeneratedDevice?.(created);
+
+      updateDevices((prev) => [
+        created,
+        ...prev.filter((d) => d.id !== created.id),
+      ]);
+
+      setSelectedDeviceId?.(created.id);
+    }
       updateScript(result.setup_script || '');
     } catch (err) {
       setDeviceError(err.message || 'Could not register device');

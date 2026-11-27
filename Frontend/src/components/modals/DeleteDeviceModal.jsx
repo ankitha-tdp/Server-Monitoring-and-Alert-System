@@ -11,12 +11,19 @@ export default function DeleteDeviceModal({
   loading,
   error
 }) {
-  const [commandCopied, setCommandCopied] = useState(false);
+  const [commandCopiedStop, setCommandCopiedStop] = useState(false);
+  const [commandCopiedDel, setCommandCopiedDel] = useState(false);
 
   async function handleCopyStopCommand() {
     await navigator.clipboard.writeText(stopAgentCommand);
-    setCommandCopied(true);
-    setTimeout(() => setCommandCopied(false), 2000);
+    setCommandCopiedStop(true);
+    setTimeout(() => setCommandCopiedStop(false), 2000);
+  }
+
+  async function handleCopyDeleteCommand() {
+    await navigator.clipboard.writeText(stopAgentCommand);
+    setCommandCopiedDel(true);
+    setTimeout(() => setCommandCopiedDel(false), 2000);
   }
 
   if (!isOpen) return null;
@@ -60,7 +67,7 @@ export default function DeleteDeviceModal({
               onClick={handleCopyStopCommand}
               className="shrink-0 px-2 py-1 rounded text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
             >
-              {commandCopied ? 'Copied!' : 'Copy'}
+              {commandCopiedStop ? 'Copied!' : 'Copy'}
             </button>
           </div>
 
@@ -80,10 +87,10 @@ export default function DeleteDeviceModal({
             </code>
             <button
               type="button"
-              onClick={handleCopyStopCommand}
+              onClick={handleCopyDeleteCommand}
               className="shrink-0 px-2 py-1 rounded text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
             >
-              {commandCopied ? 'Copied!' : 'Copy'}
+              {commandCopiedDel ? 'Copied!' : 'Copy'}
             </button>
           </div>
 

@@ -1,12 +1,13 @@
 
 export const generateTelegrafConfig = (
   deviceId,
+  deviceName,
   influxUrl,
   influxToken,
   influxOrg,
   influxBucket = 'hardware-metrics'
 ) => {
-  if (!deviceId || !influxUrl || !influxToken || !influxOrg) {
+  if (!deviceId || !deviceName || !influxUrl || !influxToken || !influxOrg) {
     throw new Error('Missing required Telegraf configuration values');
   }
 
@@ -21,6 +22,7 @@ export const generateTelegrafConfig = (
   return `
 [global_tags]
   device_id = "${escapeToml(deviceId)}"
+  device_name = "${escapeToml(deviceName)}"
 
 [agent]
   interval = "10s"

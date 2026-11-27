@@ -175,6 +175,7 @@ export const getDeviceConfig = async (req, res) => {
 
     const config = generateTelegrafConfig(
       device.id,
+      device.device_name,
       process.env.INFLUX_URL,
       process.env.INFLUX_TOKEN_WRITE,
       process.env.INFLUX_ORG,
