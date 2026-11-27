@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import EditDeviceModal from '../components/modals/EditDeviceModal';
+import DeleteDeviceModal from '../components/modals/DeleteDeviceModal';
 import { Monitor, Mail } from 'lucide-react';
 import TopNavbar from '../components/layout/TopNavbar';
 import FleetSummaryBar from '../components/layout/FleetSummaryBar';
@@ -7,7 +9,11 @@ import TelemetryGrid from '../components/telemetry/TelemetryGrid';
 import AlertRulesPanel from '../components/alerts/AlertRulesPanel';
 import AddDeviceModal from '../components/modals/AddDeviceModal';
 import AddAlertModal from '../components/modals/AddAlertModal';
-import { createDevice } from '../api/deviceApi';
+import {
+  createDevice,
+  updateDevice,
+  deleteDevice
+} from '../api/deviceApi';
 import { getDeviceTelemetry } from '../api/telemetryApi';
 import {
   createAlertRule,
@@ -98,6 +104,16 @@ export default function UserDashboard({
   const [liveSeries, setLiveSeries] = useState([]);
   const [telemetryLoading, setTelemetryLoading] = useState(false);
   const [telemetryError, setTelemetryError] = useState('');
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const [editingDevice, setEditingDevice] = useState(null);
+  const [editDeviceName, setEditDeviceName] = useState('');
+  const [editDeviceOs, setEditDeviceOs] = useState('');
+
+  const [deviceActionLoading, setDeviceActionLoading] = useState(false);
+  const [deviceActionError, setDeviceActionError] = useState('');
 
   const deviceList = setDevices ? devices : localDevices;
   const updateDevices = setDevices ?? setLocalDevices;
@@ -383,6 +399,124 @@ async function handleDeleteAlertRule(ruleId) {
     setTimeout(() => updateCopied(false), 2000);
   }
 
+
+  const handleOpenEditModal = () => {
+    if (!activeDevice) return;
+
+    setEditingDevice(activeDevice);
+    setEditDeviceName(
+      activeDevice.name || activeDevice.device_name || ''
+    );
+    setEditDeviceOs(
+      activeDevice.os_name || activeDevice.os || 'Windows'
+    );
+
+    setDeviceActionError('');
+    setIsEditModalOpen(true);
+  };
+
+  async function handleEditDeviceSubmit(e) {
+    e.preventDefault();
+
+    if (!editingDevice) return;
+
+    const trimmedName = editDeviceName.trim();
+
+    if (!trimmedName) {
+      setDeviceActionError('Device name cannot be empty');
+      return;
+    }
+
+    try {
+      setDeviceActionLoading(true);
+      setDeviceActionError('');
+
+      const token = await resolveAccessToken();
+
+      const updates = {
+        device_name: trimmedName,
+        os_name: editDeviceOs
+      };
+
+      const updated = await updateDevice(
+        editingDevice.id,
+        updates,
+        token
+      );
+
+      // Update local dashboard state
+      updateDevices((prev) =>
+        prev.map((device) =>
+          device.id === editingDevice.id
+            ? {
+                ...device,
+                ...(updated || {}),
+                name: updated?.device_name || trimmedName,
+                device_name: updated?.device_name || trimmedName,
+                os: updated?.os_name || editDeviceOs,
+                os_name: updated?.os_name || editDeviceOs
+              }
+            : device
+        )
+      );
+
+      setIsEditModalOpen(false);
+      setEditingDevice(null);
+    } catch (error) {
+      setDeviceActionError(
+        error.message || 'Failed to update device'
+      );
+    } finally {
+      setDeviceActionLoading(false);
+    }
+  }
+
+  const handleOpenDeleteModal = () => {
+    if (!activeDevice) return;
+
+    setDeviceActionError('');
+    setIsDeleteModalOpen(true);
+  };
+
+  async function handleDeleteDevice() {
+    if (!activeDevice) return;
+
+    const deletingId = activeDevice.id;
+
+    try {
+      setDeviceActionLoading(true);
+      setDeviceActionError('');
+
+      const token = await resolveAccessToken();
+
+      await deleteDevice(deletingId, token);
+
+      // Remove the deleted device
+      const remainingDevices = deviceList.filter(
+        (device) => device.id !== deletingId
+      );
+
+      updateDevices(remainingDevices);
+
+      // Clear its telemetry
+      setLiveSeries([]);
+
+      // Select another device
+      setSelectedDeviceId?.(
+        remainingDevices[0]?.id || ''
+      );
+
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      setDeviceActionError(
+        error.message || 'Failed to delete device'
+      );
+    } finally {
+      setDeviceActionLoading(false);
+    }
+  }
+
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <TopNavbar
@@ -432,6 +566,21 @@ async function handleDeleteAlertRule(ruleId) {
                       <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-slate-950 text-slate-300 border border-slate-800">
                         device_id: {activeDevice.id}
                       </span>
+                      <button
+                        type="button"
+                        onClick={handleOpenEditModal}
+                        className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800 hover:text-white transition"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleOpenDeleteModal}
+                        className="px-2.5 py-1 rounded-md text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition"
+                      >
+                        Delete
+                      </button>
                     </div>
                     <p className="text-xs text-slate-400 font-mono">
                       {activeDevice.os || activeDevice.os_name || 'Windows'} • Host IP:{' '}
@@ -521,6 +670,35 @@ async function handleDeleteAlertRule(ruleId) {
         setRuleCooldown={setRuleCooldown}
         onSubmit={onAddAlertSubmit}
         alertError={alertError}
+      />
+
+      <EditDeviceModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setDeviceActionError('');
+        }}
+        deviceName={editDeviceName}
+        setDeviceName={setEditDeviceName}
+        deviceOs={editDeviceOs}
+        setDeviceOs={setEditDeviceOs}
+        onSubmit={handleEditDeviceSubmit}
+        loading={deviceActionLoading}
+        error={deviceActionError}
+      />
+
+      <DeleteDeviceModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeviceActionError('');
+        }}
+        onConfirm={handleDeleteDevice}
+        deviceName={
+          activeDevice?.name || activeDevice?.device_name || ''
+        }
+        loading={deviceActionLoading}
+        error={deviceActionError}
       />
     </div>
   );
