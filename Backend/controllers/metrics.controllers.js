@@ -1,6 +1,7 @@
 
 import supabase from '../config/supabase.js';
 import * as metricService from '../services/metrics.services.js';
+import { evaluateAlertRules } from '../services/alerts.services.js';
 
 export const getAllMetrics = async (req, res) => {
     try {
@@ -27,6 +28,11 @@ export const getAllMetrics = async (req, res) => {
         }
 
         const metrics = await metricService.fetchAllDeviceMetrics(deviceId);
+        try {
+            await evaluateAlertRules(deviceId, metrics);
+        } catch (alertError) {
+                console.error('Alert evaluation error:', alertError.message);
+            }
 
         return res.status(200).json({
             success: true,
