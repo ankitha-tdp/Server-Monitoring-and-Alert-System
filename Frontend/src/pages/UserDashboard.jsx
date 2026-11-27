@@ -10,9 +10,11 @@ import AlertRulesPanel from '../components/alerts/AlertRulesPanel';
 import AddDeviceModal from '../components/modals/AddDeviceModal';
 import AddAlertModal from '../components/modals/AddAlertModal';
 import {
+  getDevices,
   createDevice,
   updateDevice,
-  deleteDevice
+  deleteDevice,
+  downloadDeviceConfig
 } from '../api/deviceApi';
 import { getDeviceTelemetry } from '../api/telemetryApi';
 import {
@@ -225,6 +227,16 @@ export default function UserDashboard({
     if (currentUser?.access_token) return currentUser.access_token;
     return '';
   }
+
+  const handleDownloadConfig = async (deviceId) => {
+  const token = session?.access_token || currentUser?.access_token || '';
+
+  if (!token) {
+    throw new Error('Authentication token is missing');
+  }
+
+  return await downloadDeviceConfig(deviceId, token);
+};
 
   useEffect(() => {
   async function loadAlertRules() {
@@ -636,7 +648,7 @@ async function handleDeleteAlertRule(ruleId) {
         isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false);
-          setGeneratedDevice?.(null);
+          setGeneratedDevice(null);
           setDeviceError('');
         }}
         newDeviceName={newDeviceName}
@@ -645,13 +657,10 @@ async function handleDeleteAlertRule(ruleId) {
         setNewDeviceOs={setNewDeviceOs}
         generatedDevice={generatedDevice}
         setGeneratedDevice={setGeneratedDevice}
-        setupScript={activeScript}
-        copiedCmd={isCopied}
+        onSubmit={onAddDeviceSubmit}
+        onDownloadConfig={handleDownloadConfig}
         submitting={submittingDevice}
         error={deviceError}
-        onSubmit={onAddDeviceSubmit}
-        getPowerShellCommand={getPowerShellCommand}
-        onCopyCommand={handleCopyCommand}
       />
 
       <AddAlertModal

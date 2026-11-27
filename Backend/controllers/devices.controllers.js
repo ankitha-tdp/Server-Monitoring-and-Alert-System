@@ -1,57 +1,65 @@
-import  supabase  from '../config/supabase.js';
-import { generateTelegrafSetupScript } from '../utils/generateTelegrafScript.js';
-import { fetchDevicesByRole, createDeviceWithSetupScript } from '../services/devices.services.js';
+import supabase from '../config/supabase.js';
+import { generateTelegrafConfig } from '../utils/generateTelegrafConfig.js';
+import {
+  fetchDevicesByRole,
+  insertDevice
+} from '../services/devices.services.js';
+
 
 // POST /api/devices - Aligned with schema columns
+
 export const registerDevice = async (req, res) => {
   try {
-    const { device_name, hostname, ip_address, os_name, os_version } = req.body;
+    const {
+      device_name,
+      hostname,
+      ip_address,
+      os_name,
+      os_version
+    } = req.body;
+
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        error: 'user_id is required',
+        error: 'Authentication required'
       });
     }
 
-    if (!device_name || !hostname) {
+    if (!device_name?.trim() || !hostname?.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'device_name and hostname are required',
+        error: 'device_name and hostname are required'
       });
     }
 
-    const { device, setupScript } = await createDeviceWithSetupScript(
-      {
-        user_id: userId,
-        device_name,
-        hostname,
-        ip_address: ip_address || null,
-        os_name: os_name || 'Windows',
-        os_version: os_version || '11',
-        agent_status: 'online',
-      },
-      {
-        telegrafVersion: process.env.TELEGRAF_VERSION,
-        influxUrl: process.env.INFLUX_URL,
-        influxOrg: process.env.INFLUX_ORG,
-        influxBucket: process.env.INFLUX_BUCKET,
-        influxToken: process.env.INFLUX_TOKEN_WRITE,
-      }
-    );
+    const device = await insertDevice({
+      user_id: userId,
+      device_name: device_name.trim(),
+      hostname: hostname.trim(),
+      ip_address: ip_address || null,
+      os_name: os_name || 'Windows',
+      os_version: os_version || '11',
+      agent_status: 'offline'
+    });
 
     return res.status(201).json({
       success: true,
       message: 'Device registered successfully',
-      data: device,
-      setup_script: setupScript,
+      data: device
     });
+
   } catch (error) {
     console.error('Error in registerDevice:', error);
-    return res.status(500).json({ success: false, error: error.message });
+
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
+
 
 // PATCH /api/devices/:deviceId - Aligned with schema
 export const updateDevice = async (req, res) => {
@@ -129,40 +137,65 @@ export const getDevices = async (req, res) => {
   }
 };
 
-//------------------------------------------------------------------
-// GET /api/devices/script/:deviceId (to fetch registered dev script)
-export const getDeviceScript = async (req, res) => {
-    try {
-    const { deviceId } = req.params; // Using schema primary key 'id'
+
+export const getDeviceConfig = async (req, res) => {
+  try {
+    const { deviceId } = req.params;
 
     if (!deviceId) {
-      return res.status(400).send('# Error: Device ID is required');
+      return res.status(400).json({
+        success: false,
+        error: 'Device ID is required'
+      });
     }
 
+    // Verify device ownership.
     const { data: device, error } = await supabase
-        .from('devices')
-        .select('id')
-        .eq('id', deviceId)
-        .eq('user_id', req.user.id)
-        .single();
+      .from('devices')
+      .select('id, device_name, os_name')
+      .eq('id', deviceId)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
 
-      if (error || !device) {
-        return res.status(404).send('# Error: Device not found');
-      }
+    if (error) throw error;
 
-    // Using the device UUID as the global tag in Telegraf
-    const script = generateTelegrafSetupScript(
-      deviceId,
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        error: 'Device not found'
+      });
+    }
+
+    if (device.os_name?.toLowerCase() !== 'windows') {
+      return res.status(400).json({
+        success: false,
+        error: 'Configuration currently supports Windows devices only'
+      });
+    }
+
+    const config = generateTelegrafConfig(
+      device.id,
       process.env.INFLUX_URL,
       process.env.INFLUX_TOKEN_WRITE,
       process.env.INFLUX_ORG,
-      process.env.INFLUX_BUCKET
+      process.env.INFLUX_BUCKET || 'hardware-metrics'
     );
 
-    res.setHeader('Content-Type', 'text/plain');
-    return res.status(200).send(script);
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="telegraf-${device.id}.conf"`
+    );
+    res.setHeader('Cache-Control', 'no-store');
+
+    return res.status(200).send(config);
+
   } catch (error) {
-    console.error('Error generating script:', error);
-    return res.status(500).send('# Internal Server Error');
+    console.error('Error generating device config:', error);
+
+    return res.status(500).json({
+      success: false,
+      error: 'Could not generate device configuration'
+    });
   }
 };

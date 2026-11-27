@@ -1,5 +1,4 @@
 import supabase from '../config/supabase.js';
-import { generateTelegrafSetupScript } from '../utils/generateTelegrafScript.js';
 
 export const insertDevice = async (deviceData) => {
   const { data, error } = await supabase
