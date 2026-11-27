@@ -8,6 +8,7 @@ import AlertRulesPanel from '../components/alerts/AlertRulesPanel';
 import AddDeviceModal from '../components/modals/AddDeviceModal';
 import AddAlertModal from '../components/modals/AddAlertModal';
 import { createDevice } from '../api/deviceApi';
+import { getDeviceTelemetry } from '../api/telemetryApi';
 import {
   createAlertRule,
   getAlertRules,
@@ -16,7 +17,6 @@ import {
   deleteAlertRule
 } from '../api/alertApi';
 import { DEFAULT_ALERTS, DEFAULT_RULES } from '../data/mockData';
-
 
 function parseOsSelection(osLabel = '') {
   if (osLabel.toLowerCase().includes('linux')) {
@@ -33,6 +33,19 @@ function toHostname(name = '') {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
   return cleaned || 'WORKSTATION-01';
+}
+
+function normalizeTelemetryPoints(rawPoints = []) {
+  return rawPoints.map((pt, idx) => ({
+    time:
+      pt.time ||
+      pt._time ||
+      pt.timestamp ||
+      new Date(Date.now() - (rawPoints.length - idx) * 10000).toLocaleTimeString(),
+    cpu: Number(pt.cpu ?? pt.cpu_usage ?? pt.usage_user ?? 0),
+    ram: Number(pt.ram ?? pt.mem_used_percent ?? pt.used_percent ?? 0),
+    disk: Number(pt.disk ?? pt.disk_used_percent ?? 0),
+  }));
 }
 
 export default function UserDashboard({
@@ -82,6 +95,10 @@ export default function UserDashboard({
   const [submittingDevice, setSubmittingDevice] = useState(false);
   const [deviceError, setDeviceError] = useState('');
 
+  const [liveSeries, setLiveSeries] = useState([]);
+  const [telemetryLoading, setTelemetryLoading] = useState(false);
+  const [telemetryError, setTelemetryError] = useState('');
+
   const deviceList = setDevices ? devices : localDevices;
   const updateDevices = setDevices ?? setLocalDevices;
   const rules = alertRules ?? localRules;
@@ -122,7 +139,47 @@ export default function UserDashboard({
     fleetSource[0] ||
     null;
 
-  const activeSeries = activeDevice ? deviceHistory[activeDevice.id] || [] : [];
+  const authToken = session?.access_token || currentUser?.access_token || '';
+
+  useEffect(() => {
+    const targetId = activeDevice?.id;
+    if (!targetId) {
+      setLiveSeries([]);
+      setTelemetryError('');
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchTelemetry = async (isInitial = false) => {
+      try {
+        if (isInitial) setTelemetryLoading(true);
+        setTelemetryError('');
+
+        const raw = await getDeviceTelemetry(targetId, authToken, '-1h');
+        if (!cancelled) {
+          setLiveSeries(normalizeTelemetryPoints(raw));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTelemetryError(err.message || 'Failed to load InfluxDB telemetry');
+        }
+      } finally {
+        if (!cancelled && isInitial) setTelemetryLoading(false);
+      }
+    };
+
+    fetchTelemetry(true);
+    const intervalId = setInterval(() => fetchTelemetry(false), 10000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [activeDevice?.id, authToken]);
+
+  const activeSeries =
+    liveSeries.length > 0 ? liveSeries : activeDevice ? deviceHistory[activeDevice.id] || [] : [];
 
   const deviceThresholds = rules.reduce((acc, r) => {
     const activeName = activeDevice?.name || activeDevice?.device_name;
@@ -199,7 +256,6 @@ export default function UserDashboard({
       setDeviceError('');
       updateCopied(false);
 
-      const token = await resolveAccessToken();
       const { os_name, os_version } = parseOsSelection(newDeviceOs);
 
       const payload = {
@@ -209,7 +265,7 @@ export default function UserDashboard({
         os_version,
       };
 
-      const result = await createDevice(payload, token);
+      const result = await createDevice(payload, authToken);
       const created = result.data || result.device;
 
       if (created) {
@@ -393,7 +449,19 @@ async function handleDeleteAlertRule(ruleId) {
                   </button>
                 </div>
 
-                <TelemetryGrid data={activeSeries} thresholds={deviceThresholds} />
+                {telemetryError && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono text-amber-300">
+                    InfluxDB sync notice: {telemetryError}
+                  </div>
+                )}
+
+                {telemetryLoading && activeSeries.length === 0 ? (
+                  <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 text-center text-xs font-mono text-slate-400">
+                    Loading InfluxDB telemetry for {activeDevice.id}...
+                  </div>
+                ) : (
+                  <TelemetryGrid data={activeSeries} thresholds={deviceThresholds} />
+                )}
               </>
             ) : (
               <div className="p-12 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-3">
