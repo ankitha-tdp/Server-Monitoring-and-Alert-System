@@ -117,6 +117,11 @@ export default function UserDashboard({
   const [deviceActionLoading, setDeviceActionLoading] = useState(false);
   const [deviceActionError, setDeviceActionError] = useState('');
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingDevice, setDeletingDevice] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [commandCopied, setCommandCopied] = useState(false);
+
   const deviceList = setDevices ? devices : localDevices;
   const updateDevices = setDevices ?? setLocalDevices;
   const rules = alertRules ?? localRules;
@@ -483,51 +488,49 @@ async function handleDeleteAlertRule(ruleId) {
     }
   }
 
-  const handleOpenDeleteModal = () => {
-    if (!activeDevice) return;
+  // const handleOpenDeleteModal = () => {
+  //   if (!activeDevice) return;
 
-    setDeviceActionError('');
-    setIsDeleteModalOpen(true);
-  };
+  //   setDeviceActionError('');
+  //   setIsDeleteModalOpen(true);
+  // };
 
-  async function handleDeleteDevice() {
-    if (!activeDevice) return;
+  function handleOpenDeleteModal() {
+  setDeleteError('');
+  setCommandCopied(false);
+  setShowDeleteModal(true);
+}
 
-    const deletingId = activeDevice.id;
+async function handleDeleteDevice() {
+  if (!activeDevice) return;
 
-    try {
-      setDeviceActionLoading(true);
-      setDeviceActionError('');
+  try {
+    setDeletingDevice(true);
+    setDeleteError('');
 
-      const token = await resolveAccessToken();
+    const token = await resolveAccessToken();
 
-      await deleteDevice(deletingId, token);
-
-      // Remove the deleted device
-      const remainingDevices = deviceList.filter(
-        (device) => device.id !== deletingId
-      );
-
-      updateDevices(remainingDevices);
-
-      // Clear its telemetry
-      setLiveSeries([]);
-
-      // Select another device
-      setSelectedDeviceId?.(
-        remainingDevices[0]?.id || ''
-      );
-
-      setIsDeleteModalOpen(false);
-    } catch (error) {
-      setDeviceActionError(
-        error.message || 'Failed to delete device'
-      );
-    } finally {
-      setDeviceActionLoading(false);
+    if (!token) {
+      throw new Error('Authentication token is missing');
     }
-  }
 
+    const deletedId = activeDevice.id;
+
+    await deleteDevice(deletedId, token);
+
+    updateDevices((prev) =>
+      prev.filter((device) => device.id !== deletedId)
+    );
+
+    setSelectedDeviceId?.(null);
+    setShowDeleteModal(false);
+
+  } catch (error) {
+    setDeleteError(error.message || 'Failed to delete device');
+  } finally {
+    setDeletingDevice(false);
+  }
+}
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -589,7 +592,7 @@ async function handleDeleteAlertRule(ruleId) {
                       <button
                         type="button"
                         onClick={handleOpenDeleteModal}
-                        className="px-2.5 py-1 rounded-md text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition"
+                        className="px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20"
                       >
                         Delete
                       </button>
@@ -697,17 +700,11 @@ async function handleDeleteAlertRule(ruleId) {
       />
 
       <DeleteDeviceModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setDeviceActionError('');
-        }}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        device={activeDevice}
         onConfirm={handleDeleteDevice}
-        deviceName={
-          activeDevice?.name || activeDevice?.device_name || ''
-        }
-        loading={deviceActionLoading}
-        error={deviceActionError}
+        deleting={deletingDevice}
       />
     </div>
   );

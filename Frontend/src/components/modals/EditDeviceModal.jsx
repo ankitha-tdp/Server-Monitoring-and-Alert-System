@@ -43,7 +43,7 @@ export default function EditDeviceModal({
             />
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <label className="text-xs font-medium text-slate-300">
               Operating System
             </label>
@@ -55,7 +55,7 @@ export default function EditDeviceModal({
               <option value="Windows">Windows</option>
               <option value="Linux">Linux</option>
             </select>
-          </div>
+          </div> */}
 
           {error && (
             <p className="text-xs text-red-400">{error}</p>
