@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import supabase from '../config/supabase.js';
 
 dotenv.config();
 
@@ -38,4 +39,13 @@ export const loginUser = async (email, password) => {
     if (error) throw error;
 
     return data;
+};
+// Logout the current user
+export const logoutUser = async (accessToken) => {
+    const { error } = await supabase.auth.admin.signOut(
+        accessToken,
+        'global'
+    );
+
+    if (error) throw error;
 };

@@ -390,7 +390,7 @@ async function handleDeleteAlertRule(ruleId) {
         alerts={alerts}
         onMarkAllRead={() => setAlerts((prev) => prev.map((a) => ({ ...a, unread: false })))}
         onOpenAddModal={handleOpenAddModal}
-        onLogout={handleLogout}
+        handleLogout={handleLogout}
       />
 
       <FleetSummaryBar
