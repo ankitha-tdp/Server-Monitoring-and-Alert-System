@@ -220,18 +220,22 @@ export default function AdminDashboard({
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          {isSelf ? (
-                            <span className="text-xs font-mono text-slate-500">Current Session</span>
-                          ) : (
-                            <div className="inline-flex items-center gap-2">
-                              <button type="button" onClick={() => handleToggleUserStatus(u.id)} className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 transition-colors">
-                                {u.status === 'active' ? 'Suspend' : 'Activate'}
-                              </button>
-                              <button type="button" onClick={() => handleDeleteUser(u.id)} title="Delete" className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
+                          
+{isSelf ? (
+    <span className="text-xs font-mono text-slate-500">
+        Current Session
+    </span>
+) : (
+    <button
+        type="button"
+        onClick={() => handleDeleteUser(u.id)}
+        title="Delete"
+        className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
+    >
+        <Trash2 className="w-3.5 h-3.5" />
+    </button>
+)}
+
                         </td>
                       </tr>
                     );
