@@ -5,6 +5,7 @@ import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import { loginUser, registerUser, getCurrentUser, logoutUser } from './api/authApi';
 import { getDevices } from './api/deviceApi';
+import { getAdminUsers, getAdminDevices, deleteAdminUser } from './api/adminApi';
 
 const INITIAL_ALERT_RULES = [
   {
@@ -151,7 +152,7 @@ export default function App() {
 
   useEffect(() => {
   const loadDevices = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || currentUser?.role !== 'user') return;
 
     try {
       const fetchedDevices = await getDevices(session.access_token);
@@ -165,7 +166,64 @@ export default function App() {
   };
 
   loadDevices();
-}, [session]);
+}, [session, currentUser]);
+
+
+useEffect(() => {
+    if (currentUser?.role !== 'admin' || !session?.access_token) {
+        return;
+    }
+
+    let cancelled = false;
+
+    const loadAdminData = async () => {
+        try {
+            const [usersData, devicesData] = await Promise.all([
+                getAdminUsers(session.access_token),
+                getAdminDevices(session.access_token)
+            ]);
+
+            if (cancelled) return;
+
+            setUsers(usersData.map((u) => ({
+                id: u.id,
+                email: u.email,
+                username: u.username || u.full_name || u.email,
+                role: u.role,
+                status: u.status || 'active',
+                createdAt: u.created_at
+                    ? new Date(u.created_at).toLocaleDateString()
+                    : 'N/A'
+            })));
+
+            setDevices(devicesData.map((d) => ({
+                ...d,
+                userId: d.user_id,
+                name: d.device_name,
+                ownerName: d.owner_name || 'Unknown',
+                os: d.os_name || 'Unknown',
+                ip: d.ip_address || 'N/A',
+                status: d.agent_status === 'online' ? 'online' : 'offline',
+                cpu: 0,
+                ram: 0,
+                disk: 0
+            })));
+
+        } catch (error) {
+            if (!cancelled) {
+                console.error('Failed to load admin data:', error);
+                setAuthError(error.message);
+            }
+        }
+    };
+
+    loadAdminData();
+
+    return () => {
+        cancelled = true;
+    };
+}, [currentUser, session]);
+
 
   useEffect(() => {
     if (currentUser && currentUser.role === 'user') {
@@ -293,11 +351,23 @@ const handleLoginSubmit = async (e) => {
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: u.status === 'active' ? 'suspended' : 'active' } : u)));
   };
 
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
     if (userId === currentUser.id) return;
-    setUsers((prev) => prev.filter((u) => u.id !== userId));
-    setDevices((prev) => prev.filter((d) => d.userId !== userId));
-  };
+
+    if (!window.confirm('Are you sure you want to permanently delete this user?')) {
+        return;
+    }
+
+    try {
+        await deleteAdminUser(session.access_token, userId);
+
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+        setDevices((prev) => prev.filter((d) => d.userId !== userId));
+
+    } catch (error) {
+        alert(error.message || 'Failed to delete user');
+    }
+};
 
   const handleToggleDeviceStatus = (deviceId) => {
     setDevices((prev) =>

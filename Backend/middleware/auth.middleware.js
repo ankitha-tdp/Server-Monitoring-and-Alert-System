@@ -22,7 +22,6 @@ const authenticateUser = async (req, res, next) => {
         }
 
         req.user = data.user;
-
         next();
 
     } catch (error) {
@@ -30,6 +29,38 @@ const authenticateUser = async (req, res, next) => {
 
         return res.status(500).json({
             message: 'Authentication failed'
+        });
+    }
+};
+
+// Check whether the authenticated user is an admin
+export const requireAdmin = async (req, res, next) => {
+    try {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', req.user.id)
+            .single();
+
+        if (error || !profile) {
+            return res.status(403).json({
+                message: 'User profile not found'
+            });
+        }
+
+        if (profile.role !== 'admin') {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+
+        next();
+
+    } catch (error) {
+        console.error('Admin authorization error:', error.message);
+
+        return res.status(500).json({
+            message: 'Authorization failed'
         });
     }
 };
